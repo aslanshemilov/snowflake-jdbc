@@ -244,6 +244,7 @@ public class AbstractDriverIT
     properties.put("schema", params.get("schema"));
     properties.put("warehouse", params.get("warehouse"));
     properties.put("ssl", params.get("ssl"));
+    properties.put("tracing", "ALL");
 
     properties.put("internal", "true"); // TODO: do we need this?
 
