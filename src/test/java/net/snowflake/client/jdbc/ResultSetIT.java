@@ -735,18 +735,6 @@ public class ResultSetIT extends BaseJDBCTest
   }
 
   @Test
-  public void testFetchOnClosedResultSet() throws SQLException
-  {
-    Connection connection = getConnection();
-    Statement statement = connection.createStatement();
-    ResultSet resultSet = statement.executeQuery(selectAllSQL);
-    assertTrue(!resultSet.isClosed());
-    resultSet.close();
-    assertTrue(resultSet.isClosed());
-    assertFalse(resultSet.next());
-  }
-
-  @Test
   public void testDateTimeRelatedTypeConversion() throws SQLException
   {
     Connection connection = getConnection();

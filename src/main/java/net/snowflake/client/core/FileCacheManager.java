@@ -141,13 +141,34 @@ class FileCacheManager
         this.cacheDir = new File(new File(homeDir, ".cache"), "snowflake");
       }
     }
-    if (!this.cacheDir.exists() && !this.cacheDir.mkdirs())
+    final int sleep = 10;
+    // attempt to create the directory up to 10 times
+    for (int cnt = 0; !this.cacheDir.exists() && cnt < 5; ++cnt)
     {
-      throw new RuntimeException(
-          String.format(
-              "Failed to locate or create the cache directory: %s", this.cacheDir)
-      );
+      LOGGER.debug("Not exists directory. Creating: {}", this.cacheDir.getAbsolutePath());
+      if (this.cacheDir.mkdirs())
+      {
+        LOGGER.debug("Successfully created: {}", this.cacheDir.getAbsolutePath());
+        break;
+      }
+      LOGGER.debug("Failed to create, maybe already created by other process/thread? Checking again, cnt: {}, {}", cnt,
+                  this.cacheDir.getAbsolutePath());
+      try
+      {
+        LOGGER.debug("Sleeping {}ms", sleep);
+        Thread.sleep(sleep);
+      }
+      catch (InterruptedException e)
+      {
+        LOGGER.debug("Sleep interrupted. Ignored.");
+      }
     }
+    if (!this.cacheDir.exists())
+    {
+      LOGGER.debug("Still Not exists %s. Giving up.");
+      return this;
+    }
+    LOGGER.debug("Verified Directory {}", this.cacheDir.getAbsolutePath());
 
     File cacheFileTmp = new File(
         this.cacheDir, this.baseCacheFileName).getAbsoluteFile();
@@ -157,18 +178,21 @@ class FileCacheManager
       // If exists. the method returns false.
       // In this particular case, it doesn't matter as long as the file is
       // writable.
-      cacheFileTmp.createNewFile();
+      if (cacheFileTmp.createNewFile())
+      {
+        LOGGER.debug("Empty cache file is successfully created. {}", cacheFileTmp.getAbsolutePath());
+      }
+      else
+      {
+        LOGGER.debug("Cache file already exists. {}", cacheFileTmp.getAbsolutePath());
+      }
       this.cacheFile = cacheFileTmp.getCanonicalFile();
       this.cacheLockFile = new File(
           this.cacheFile.getParentFile(), this.baseCacheFileName + ".lck");
     }
     catch (IOException | SecurityException ex)
     {
-      throw new RuntimeException(
-          String.format(
-              "Failed to touch the cache file: %s",
-              cacheFileTmp.getAbsoluteFile())
-      );
+      LOGGER.debug("no cache file is created. Ignored.");
     }
     return this;
   }
@@ -248,6 +272,10 @@ class FileCacheManager
     LOGGER.debug("Deleting cache file. File={}, Lock File={}",
         cacheFile, cacheLockFile);
 
+    if (cacheFile == null)
+    {
+      return;
+    }
     unlockCacheFile();
     if (!cacheFile.delete())
     {
